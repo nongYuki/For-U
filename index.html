@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>3D Heart ❤️</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
+canvas{display:block;width:100%;height:100%}
+.hint{position:fixed;bottom:22px;left:0;right:0;text-align:center;color:#777;font:14px system-ui,sans-serif;opacity:.65}
+</style>
+</head>
+<body>
+<canvas id="heart"></canvas>
+<div class="hint">แตะหน้าจอเพื่อเปลี่ยนมุมมอง</div>
+<script>
+const c=document.getElementById("heart"),x=c.getContext("2d");
+let w,h,d,points=[],rot=0,target=0;
+const TAU=Math.PI*2;
+function resize(){
+ d=Math.min(devicePixelRatio||1,2);w=innerWidth;h=innerHeight;
+ c.width=w*d;c.height=h*d;x.setTransform(d,0,0,d,0,0);build();
+}
+function H(t){
+ return [16*Math.sin(t)**3,
+ -(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))];
+}
+function build(){
+ points=[];
+ const n=Math.max(1100,Math.min(2800,Math.floor(w*h/380)));
+ for(let i=0;i<n;i++){
+   const t=Math.random()*TAU, q=H(t), r=Math.sqrt(Math.random());
+   // thickness/depth gives a real 3D volume
+   const z=(Math.random()*2-1)*4.2*Math.sqrt(1-r*r);
+   points.push({
+     x:q[0]*r+(Math.random()-.5)*.75,
+     y:q[1]*r+(Math.random()-.5)*.75,
+     z, size:.7+Math.random()*2.2, alpha:.35+Math.random()*.65,
+     tw:Math.random()*TAU
+   });
+ }
+}
+function frame(time){
+ x.clearRect(0,0,w,h);
+ rot+=(target-rot)*.025;
+ const sc=Math.min(w,h)/30.5, cx=w/2, cy=h/2;
+ const co=Math.cos(rot),si=Math.sin(rot);
+ // back glow
+ const g=x.createRadialGradient(cx,cy,sc*2,cx,cy,sc*15);
+ g.addColorStop(0,"rgba(255,0,20,.09)");g.addColorStop(1,"rgba(0,0,0,0)");
+ x.fillStyle=g;x.fillRect(0,0,w,h);
+
+ const arr=points.map(p=>{
+   const X=p.x*co-p.z*si, Z=p.x*si+p.z*co;
+   const persp=1/(1+Z/42);
+   return {p,X,Z,persp};
+ }).sort((a,b)=>a.Z-b.Z);
+
+ for(const q of arr){
+   const p=q.p, px=cx+q.X*sc*.92*q.persp, py=cy+p.y*sc*.92*q.persp;
+   const s=Math.max(.45,p.size*q.persp*(.85+.15*Math.sin(time*.002+p.tw)));
+   const depth=(q.Z+5)/10;
+   x.globalAlpha=Math.min(1,p.alpha*(.55+.45*depth));
+   x.fillStyle=`rgb(255,${18+Math.floor(35*depth)},${25+Math.floor(35*depth)})`;
+   x.beginPath();x.arc(px,py,s,0,TAU);x.fill();
+ }
+ x.globalAlpha=1;
+ target+=.004;
+ requestAnimationFrame(frame);
+}
+addEventListener("resize",resize);
+addEventListener("pointerdown",()=>target+=Math.PI*.75);
+resize();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
